@@ -17,16 +17,26 @@ df_BDKP3A = pd.read_csv("/Users/zephan/Dropbox/SRMP_shared/BDKP3A.txt", sep="\s+
 column_names4 = ["Names", "pm", "w1", "w1_error", "w2", "w2_error", "w3", "w3_error", "w4", "w4_error", "J", "J_error", "H", "H_error", "K" ,"K_error"]
 df_LSPMWISETable = pd.read_csv("/Users/zephan/Dropbox/SRMP_shared/LSPM-WISE-Table.txt", sep="\s+", comment="#", header = 0, names = column_names4)
 
-#create 3 new dataframes whcih only have the needed columns (mag tpm etc)
+df4 = pd.read_csv("/Users/zephan/Dropbox/SRMP_shared/IRTF_SpeX (SRMP) - March04.tsv", sep="\t", comment="#", header = 0)
+df5 = pd.read_csv("/Users/zephan/Dropbox/SRMP_shared/IRTF_SpeX (SRMP) - March 05.tsv", sep="\t", comment="#", header=0)
+df6 = pd.read_csv("/Users/zephan/Dropbox/SRMP_shared/IRTF_SpeX (SRMP) - March 06.tsv", sep="\t", comment="#", header=0)
+df5 = df5.drop(df5.index[5:8])
+df6 = df6.drop(df6.index[8:106])
+#create  new dataframes whcih only have the needed columns (mag tpm etc)
 df_rpm = df[['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total PM b']]
-
-#my file had a different column name so I changed the names (don't know why I changed the others tho...
 df1_rpm = df1[['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total Proper Motion']]
 df2_rpm = df2[['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total Proper Motion']]
+df4_rpm = df4[['NAME', 'J', 'J_err', 'H', 'H_err', 'K', 'K_err', 'W1', 'W1_err', "Proper Motion b" ]]
+df5_rpm = df5[['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total Proper Motion']]
+df6_rpm = df6[['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total Proper Motion']]
+
+
+#my files had a different column name so I changed the names (don't know why I changed the others tho...
 df_rpm.columns = ['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total Proper Motion']
+df4_rpm.columns = ['NAME', 'J', "J_err", 'H', 'H_err', "K", "K_err", 'W1', 'W1_err', 'Total Proper Motion']
 
 #trying to combine the columns together so all the files are merged into one. We called the combined dataframe "frames"
-frames = [df_rpm, df1_rpm, df2_rpm]
+frames = [df_rpm, df1_rpm, df2_rpm, df4_rpm, df5_rpm, df6_rpm]
 result = pd.concat(frames,ignore_index=True)
 
 # Reduced Proper Motion Equation, H = m + 5 log(μ) + 5
@@ -70,6 +80,8 @@ df3["rpm_J"] = df3["J"] + 5 * np.log10(df3["TPM"]) + 5
 badpoints=df3[(df3['J-K_color1'] > 12.5)]
 #the badpoints have been found, and we dropped them from the dataframe by calling out their individual rows numbers
 df3=df3.drop(df3.index[[474,668,759]])
+
+
 
 plt.scatter(df3["J-K_color1"], df3["rpm_J"], c="orange")
 plt.ylabel("Reduced Proper Motion_J")
@@ -181,18 +193,50 @@ plt.ylim([22,-1])
 plt.xlim([-0.6,3.5])
 plt.show()
 
+outliersJ1 = result[(result["rpm_J"]>20)]
+outliersJ2 = result[(result["J-K_color"]>2.5)]
+outliersJ3 = [outliersJ1, outliersJ2]
+outliersJ = pd.concat(outliersJ3,ignore_index=True)
+
+outliersW11 = result[(result["rpm_W1"]>20)]
+outliersW12 = result[(result["rpm_W1"]<7.5)]
+outliersW13 = result[(result["J-K_color"])>2.25]
+outliersW14 = [outliersW11, outliersW12, outliersW13]
+outliersW1 = pd.concat(outliersW14,ignore_index=True)
+
+###########################################################################################
 plt.scatter(df_LSPMWISETable["J-K_color4"], df_LSPMWISETable["rpm_w1"], c="black", s=1, label='LSPM WISE')
 plt.scatter(df_BDKP3A["J-K_color3"], df_BDKP3A["rpm_w1"], c="blue", s=1, label='BDKP3A')
 plt.scatter(result["J-K_color"], result["rpm_W1"], c="red", label="Our Data")
+plt.scatter(outliersW1["J-K_color"], outliersW1["rpm_W1"], c="yellow", label="Outliers")
 plt.ylabel("Reduced Proper Motion_w1")
 plt.xlabel('J-K_color')
-plt.ylim([22,-1])
-plt.xlim([-0.6,3.5])
+plt.ylim([25,-1])
+plt.xlim([-1,3.5])
 ##Add in legend and title##
 plt.title("Reduced Proper Motion of w1")
 ax = plt.subplot(111)
 ax.legend()
 plt.show()
+#plt.gca().invert_yaxis()
+
+
+##Plotting all databases together for J##
+plt.scatter(df_LSPMWISETable["J-K_color4"], df_LSPMWISETable["rpm_J"], c="black", s=1, label='LSPM WISE')
+plt.scatter(df_BDKP3A["J-K_color3"], df_BDKP3A["rpm_J"], c="blue", s=1, label='BDKP3A')
+plt.scatter(result["J-K_color"], result["rpm_J"], c="red", label='Our Data')
+plt.scatter(outliersJ["J-K_color"], outliersJ["rpm_J"], c="yellow", label="Outliers")
+plt.ylabel("Reduced Proper Motion_J")
+plt.xlabel('J-K_color')
+##Add in legend and title##
+plt.title("Reduced Proper Motion of J")
+ax = plt.subplot(111)
+ax.legend()
+plt.show()
+##Invert the graph over the x-axis##
+plt.gca().invert_yaxis()
+
+
 ##Invert the graph over the x-axis##
 ##plt.gca().invert_yaxis()
 ##problem with weird points that stick out on the graph
